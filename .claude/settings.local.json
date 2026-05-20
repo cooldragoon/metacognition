@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(bash *)",
+      "Bash(python -c ' *)"
+    ]
+  },
+  "mcpServers": {
+    "expert-brain": {
+      "command": "python",
+      "args": ["expert-brain-server/server.py"]
+    }
+  }
+}
