@@ -176,25 +176,6 @@ def _parse_metadata(content: str) -> dict:
     return meta
 
 
-def _words(text: str) -> set[str]:
-    """Return set of lowercase words > 3 characters from *text*."""
-    tokens = re.findall(r"[a-zA-Z0-9]{4,}", text.lower())
-    return set(tokens)
-
-
-def _draft_files() -> list[str]:
-    """Return absolute paths to every .md file in DRAFT_DIR."""
-    try:
-        entries = os.listdir(DRAFT_DIR)
-    except FileNotFoundError:
-        return []
-    return [
-        os.path.join(DRAFT_DIR, e)
-        for e in entries
-        if e.endswith(".md") and os.path.isfile(os.path.join(DRAFT_DIR, e))
-    ]
-
-
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -262,79 +243,69 @@ def ingest(
 
 
 def check_duplicate(symptom: str, root_cause: str) -> str | None:
-    """Check if a similar insight already exists in draft/.
-
-    Uses keyword overlap (words > 3 chars).  If more than 60 % of the
-    query words are found in an existing draft file the insight is
-    considered a duplicate and its ``insight_id`` is returned.
-    """
-    query_words = _words(symptom + " " + root_cause)
-    if not query_words:
+    """Check if a similar insight exists by vector similarity (threshold 0.92)."""
+    if not os.path.isdir(DRAFT_DIR):
         return None
+
+    query_embedding = _embed(f"{symptom}\n{root_cause}")
 
     best_score = 0.0
     best_id = None
-
-    for filepath in _draft_files():
-        with open(filepath, "r", encoding="utf-8") as f:
-            content = f.read()
-        file_words = _words(content)
-        if not file_words:
+    for fname in os.listdir(DRAFT_DIR):
+        if not fname.endswith(".md"):
             continue
+        np_path = os.path.join(DRAFT_DIR, fname.replace(".md", ".npy"))
+        if not os.path.exists(np_path):
+            continue
+        doc_embedding = np.load(np_path)
+        score = _cosine(query_embedding, doc_embedding)
+        if score > best_score:
+            best_score = score
+            fpath = os.path.join(DRAFT_DIR, fname)
+            with open(fpath, "r", encoding="utf-8") as f:
+                meta = _parse_metadata(f.read())
+            best_id = meta.get("id", None)
 
-        overlap = len(query_words & file_words) / len(query_words)
-        if overlap > 0.6 and overlap > best_score:
-            best_score = overlap
-            id_match = re.search(r"^>\s*ID:\s*(\S+)", content, re.MULTILINE)
-            if id_match:
-                best_id = id_match.group(1)
-
-    return best_id
+    if best_score > 0.92 and best_id:
+        return best_id
+    return None
 
 
 def query(search: str, top_k: int = 5) -> list[dict]:
-    """Search draft/*.md by keyword overlap.
+    """Search draft insights by vector similarity. Returns ranked results."""
+    if not os.path.isdir(DRAFT_DIR):
+        return []
 
-    Returns a list of result dicts sorted by score (descending):
-        [{insight_id, symptom, resolution, severity, hit_count, score, wiki_path}, …]
-    """
-    query_words = _words(search)
-    results: list[dict] = []
+    query_embedding = _embed(search)
 
-    for filepath in _draft_files():
-        with open(filepath, "r", encoding="utf-8") as f:
+    results = []
+    for fname in os.listdir(DRAFT_DIR):
+        if not fname.endswith(".md"):
+            continue
+        fpath = os.path.join(DRAFT_DIR, fname)
+        np_path = fpath.replace(".md", ".npy")
+        if not os.path.exists(np_path):
+            continue
+
+        with open(fpath, "r", encoding="utf-8") as f:
             content = f.read()
-        file_words = _words(content)
 
-        if not query_words or not file_words:
-            score = 0.0
-        else:
-            # Jaccard similarity
-            score = len(query_words & file_words) / len(query_words | file_words)
+        doc_embedding = np.load(np_path)
+        score = _cosine(query_embedding, doc_embedding)
 
-        meta = _parse_metadata(content)
+        if score > 0:
+            meta = _parse_metadata(content)
+            meta["score"] = round(score, 4)
+            meta["wiki_path"] = f"draft/{fname}"
+            results.append(meta)
 
-        # Increment hit count when a file is returned in results.
-        # (We'll bump it after ranking so we only bump top_k results.)
-        results.append(
-            {
-                "insight_id": meta.get("id", ""),
-                "symptom": meta.get("title", ""),
-                "resolution": _extract_section(content, "Resolution"),
-                "severity": meta.get("severity", "low"),
-                "hit_count": meta.get("hit_count", 0),
-                "score": score,
-                "wiki_path": filepath,
-            }
-        )
-
-    # Sort descending by score
     results.sort(key=lambda r: r["score"], reverse=True)
-
-    # Bump hit count on the top_k results
+    # Filter zero-score results
+    results = [r for r in results if r["score"] > 0]
+    # Bump hit count on returned results
     for r in results[:top_k]:
-        _bump_hit_count(r["wiki_path"])
-
+        fpath = os.path.join(DRAFT_DIR, os.path.basename(r["wiki_path"]))
+        _bump_hit_count(fpath)
     return results[:top_k]
 
 
