@@ -3,13 +3,10 @@
     "allow": [
       "WebSearch",
       "Bash(bash *)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(git -C \"D:/cc/metacognition\" add .mcp.json .claude/settings.local.json)",
+      "Bash(git -C D:/cc/metacognition commit -m 'fix: use .mcp.json for MCP server config, add auto-approval')"
     ]
   },
-  "mcpServers": {
-    "expert-brain": {
-      "command": "python",
-      "args": ["expert-brain-server/server.py"]
-    }
-  }
+  "enableAllProjectMcpServers": true
 }
