@@ -25,6 +25,7 @@ import numpy as np
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WIKI_ROOT = os.path.join(_PROJECT_ROOT, ".cursor", "insights", "wiki")
 DRAFT_DIR = os.path.join(WIKI_ROOT, "draft")
+LIVE_DIR = os.path.join(WIKI_ROOT, "live")
 INDEX_PATH = os.path.join(WIKI_ROOT, "index.md")
 LOG_PATH = os.path.join(WIKI_ROOT, "log.md")
 
@@ -307,6 +308,56 @@ def query(search: str, top_k: int = 5) -> list[dict]:
         fpath = os.path.join(DRAFT_DIR, os.path.basename(r["wiki_path"]))
         _bump_hit_count(fpath)
     return results[:top_k]
+
+
+def promote(insight_id: str) -> dict:
+    """Promote a draft insight to live constraint. Returns promotion result."""
+    draft_path = None
+    draft_content = None
+    if not os.path.isdir(DRAFT_DIR):
+        return {"promoted_id": None, "status": "error", "reason": "no draft dir"}
+
+    for fname in os.listdir(DRAFT_DIR):
+        if not fname.endswith(".md"):
+            continue
+        fpath = os.path.join(DRAFT_DIR, fname)
+        with open(fpath, "r", encoding="utf-8") as f:
+            content = f.read()
+        meta = _parse_metadata(content)
+        if meta.get("id") == insight_id:
+            draft_path = fpath
+            draft_content = content
+            break
+
+    if draft_path is None:
+        return {"promoted_id": None, "status": "error", "reason": "insight not found"}
+
+    hit_count = int(_parse_metadata(draft_content).get("hit_count", 0))
+    if hit_count < 5:
+        return {
+            "promoted_id": None,
+            "status": "threshold_not_met",
+            "reason": f"Hit count {hit_count} < 5",
+        }
+
+    os.makedirs(LIVE_DIR, exist_ok=True)
+    live_fname = os.path.basename(draft_path)
+    live_path = os.path.join(LIVE_DIR, live_fname)
+
+    live_content = draft_content.replace("> Status: draft", "> Status: live")
+    with open(live_path, "w", encoding="utf-8") as f:
+        f.write(live_content)
+
+    updated_content = draft_content.replace("> Status: draft", "> Status: promoted")
+    updated_content += "\n> Promoted to: live\n"
+    with open(draft_path, "w", encoding="utf-8") as f:
+        f.write(updated_content)
+
+    title = _parse_metadata(draft_content).get("title", insight_id)
+    _append_log("promote", title)
+    _update_index(live_fname, title, "promoted")
+
+    return {"promoted_id": insight_id, "status": "promoted", "live_path": live_path}
 
 
 def _extract_section(content: str, heading: str) -> str:

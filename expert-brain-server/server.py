@@ -51,6 +51,17 @@ async def handle_list_tools() -> list[Tool]:
                 "required": ["query"],
             },
         ),
+        Tool(
+            name="expert_brain__promote",
+            description="Promote a draft insight to a live constraint (requires hit_count >= 5).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "insight_id": {"type": "string", "description": "The insight ID to promote"},
+                },
+                "required": ["insight_id"],
+            },
+        ),
     ]
 
 
@@ -71,6 +82,11 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             query=arguments.get("query", ""),
             top_k=arguments.get("top_k", 5),
         )
+        return [TextContent(type="text", text=str(result))]
+
+    if name == "expert_brain__promote":
+        from wiki_bridge import promote as wiki_promote
+        result = wiki_promote(insight_id=arguments.get("insight_id", ""))
         return [TextContent(type="text", text=str(result))]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]
