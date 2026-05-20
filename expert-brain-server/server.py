@@ -62,6 +62,11 @@ async def handle_list_tools() -> list[Tool]:
                 "required": ["insight_id"],
             },
         ),
+        Tool(
+            name="expert_brain__decay",
+            description="Run knowledge decay: halve hit_count for 90-day stale insights, archive 180-day ones.",
+            inputSchema={"type": "object", "properties": {}},
+        ),
     ]
 
 
@@ -87,6 +92,11 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
     if name == "expert_brain__promote":
         from wiki_bridge import promote as wiki_promote
         result = wiki_promote(insight_id=arguments.get("insight_id", ""))
+        return [TextContent(type="text", text=str(result))]
+
+    if name == "expert_brain__decay":
+        from wiki_bridge import decay as wiki_decay
+        result = wiki_decay()
         return [TextContent(type="text", text=str(result))]
 
     return [TextContent(type="text", text=f"Unknown tool: {name}")]

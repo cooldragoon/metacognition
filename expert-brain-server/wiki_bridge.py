@@ -12,6 +12,7 @@ All paths are derived from __file__, not os.getcwd().
 import hashlib
 import os
 import re
+import shutil
 from datetime import date
 
 from sentence_transformers import SentenceTransformer
@@ -358,6 +359,72 @@ def promote(insight_id: str) -> dict:
     _update_index(live_fname, title, "promoted")
 
     return {"promoted_id": insight_id, "status": "promoted", "live_path": live_path}
+
+
+def decay() -> dict:
+    """Run knowledge decay: halve hit_count for insights untouched in 90 days,
+    archive those untouched in 180 days.
+    """
+    from datetime import datetime, timezone, timedelta
+
+    now = datetime.now(timezone.utc)
+    decay_90d = now - timedelta(days=90)
+    decay_180d = now - timedelta(days=180)
+
+    decayed = 0
+    archived = 0
+
+    if not os.path.isdir(DRAFT_DIR):
+        return {"decayed": 0, "archived": 0}
+
+    for fname in os.listdir(DRAFT_DIR):
+        if not fname.endswith(".md"):
+            continue
+        fpath = os.path.join(DRAFT_DIR, fname)
+        with open(fpath, "r", encoding="utf-8") as f:
+            content = f.read()
+        meta = _parse_metadata(content)
+
+        # Parse the date from > Created: YYYY-MM-DD
+        created_str = ""
+        for line in content.split("\n"):
+            if line.startswith("> Created:"):
+                created_str = line.split(":", 1)[1].strip()
+                break
+
+        if not created_str:
+            continue
+
+        try:
+            created_date = datetime.strptime(created_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+
+        # 180 days: archive
+        if created_date < decay_180d:
+            archive_dir = os.path.join(WIKI_ROOT, "archive")
+            os.makedirs(archive_dir, exist_ok=True)
+            shutil.move(fpath, os.path.join(archive_dir, fname))
+            # Also move .npy if present
+            np_path = fpath.replace(".md", ".npy")
+            if os.path.exists(np_path):
+                shutil.move(np_path, os.path.join(archive_dir, fname.replace(".md", ".npy")))
+            _append_log("archive", meta.get("title", fname))
+            archived += 1
+            continue
+
+        # 90 days: halve hit count
+        if created_date < decay_90d:
+            old_hit = int(meta.get("hit_count", 1))
+            new_hit = max(old_hit // 2, 1)
+            content = content.replace(
+                f"> Hit Count: {old_hit}", f"> Hit Count: {new_hit}"
+            )
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write(content)
+            decayed += 1
+
+    return {"decayed": decayed, "archived": archived}
 
 
 def _extract_section(content: str, heading: str) -> str:
