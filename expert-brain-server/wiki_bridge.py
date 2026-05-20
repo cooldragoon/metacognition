@@ -14,6 +14,9 @@ import os
 import re
 from datetime import date
 
+from sentence_transformers import SentenceTransformer
+import numpy as np
+
 
 # ---------------------------------------------------------------------------
 # Path constants — derived from this file's location
@@ -24,6 +27,32 @@ WIKI_ROOT = os.path.join(_PROJECT_ROOT, ".cursor", "insights", "wiki")
 DRAFT_DIR = os.path.join(WIKI_ROOT, "draft")
 INDEX_PATH = os.path.join(WIKI_ROOT, "index.md")
 LOG_PATH = os.path.join(WIKI_ROOT, "log.md")
+
+
+# ---------------------------------------------------------------------------
+# Embedding helpers
+# ---------------------------------------------------------------------------
+
+_EMBED_MODEL = None
+
+
+def _get_model():
+    """Lazy-load the embedding model (singleton)."""
+    global _EMBED_MODEL
+    if _EMBED_MODEL is None:
+        _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+    return _EMBED_MODEL
+
+
+def _embed(text: str) -> "np.ndarray":
+    """Compute embedding vector for a text."""
+    model = _get_model()
+    return model.encode(text, normalize_embeddings=True)
+
+
+def _cosine(a: "np.ndarray", b: "np.ndarray") -> float:
+    """Cosine similarity between two normalized vectors."""
+    return float(np.dot(a, b))
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +248,11 @@ def ingest(
 
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
+
+    # Store vector embedding as companion .npy file
+    embedding = _embed(f"{symptom}\n{root_cause}\n{resolution}")
+    np_path = filepath.replace(".md", ".npy")
+    np.save(np_path, embedding)
 
     # Append to log and update the index.
     _append_log("ingest", symptom.strip()[:80])
