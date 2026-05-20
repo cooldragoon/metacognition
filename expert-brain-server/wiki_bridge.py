@@ -55,6 +55,17 @@ def _generate_id(symptom: str, root_cause: str) -> str:
     return hashlib.sha256(payload).hexdigest()[:12]
 
 
+def _create_skeleton_index() -> None:
+    """Create a minimal index.md with the ## draft table header."""
+    with open(INDEX_PATH, "w", encoding="utf-8") as f:
+        f.write(
+            "# MetaCognition Insights Index\n\n"
+            "## draft\n\n"
+            "| Insight | Summary | Updated |\n"
+            "|---------|---------|----------|\n"
+        )
+
+
 def _append_log(action: str, title: str) -> None:
     """Append an entry to log.md."""
     today = date.today().isoformat()
@@ -66,7 +77,13 @@ def _append_log(action: str, title: str) -> None:
 def _update_index(filename: str, title: str, summary: str) -> None:
     """Insert a row into the ## draft table of index.md."""
     today = date.today().isoformat()
+    # Sanitize values to prevent markdown/table injection
+    title = title.replace("|", "\\|").replace("]", "\\]").replace("\n", " ")
+    summary = summary.replace("|", "\\|").replace("\n", " ")
     row = f"| [{title}](draft/{filename}) | {summary} | {today} |\n"
+
+    if not os.path.exists(INDEX_PATH):
+        _create_skeleton_index()
 
     with open(INDEX_PATH, "r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -96,19 +113,27 @@ def _update_index(filename: str, title: str, summary: str) -> None:
 
 
 def _parse_metadata(content: str) -> dict:
-    """Extract metadata from blockquote lines and the # Title heading."""
+    """Extract metadata from blockquote lines and the # Title heading.
+
+    Only parses blockquotes that appear before the first ``## `` section
+    heading, so that blockquote-like text in symptom/overview sections
+    cannot spoof metadata fields.
+    """
     meta: dict = {}
 
-    # Title from the first level-1 heading
-    title_match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
-    if title_match:
-        meta["title"] = title_match.group(1).strip()
+    for line in content.split("\n"):
+        # Stop parsing metadata once we reach a level-2 heading
+        if line.startswith("## "):
+            break
 
-    # Blockquote metadata lines:  > Key: Value
-    for match in re.finditer(r"^>\s*([A-Za-z ]+?):\s*(.*)$", content, re.MULTILINE):
-        key = match.group(1).strip().lower().replace(" ", "_")
-        value = match.group(2).strip()
-        meta[key] = value
+        if line.startswith("# ") and "title" not in meta:
+            meta["title"] = line[2:].strip()
+        elif line.startswith("> "):
+            m = re.match(r"^>\s*([A-Za-z ]+?):\s*(.*)$", line)
+            if m:
+                key = m.group(1).strip().lower().replace(" ", "_")
+                value = m.group(2).strip()
+                meta[key] = value
 
     # Hit Count may be bare integer; try to coerce
     if "hit_count" in meta:
@@ -213,6 +238,9 @@ def check_duplicate(symptom: str, root_cause: str) -> str | None:
     if not query_words:
         return None
 
+    best_score = 0.0
+    best_id = None
+
     for filepath in _draft_files():
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
@@ -221,13 +249,13 @@ def check_duplicate(symptom: str, root_cause: str) -> str | None:
             continue
 
         overlap = len(query_words & file_words) / len(query_words)
-        if overlap > 0.6:
-            # Extract the > ID: {id} line
+        if overlap > 0.6 and overlap > best_score:
+            best_score = overlap
             id_match = re.search(r"^>\s*ID:\s*(\S+)", content, re.MULTILINE)
             if id_match:
-                return id_match.group(1)
+                best_id = id_match.group(1)
 
-    return None
+    return best_id
 
 
 def query(search: str, top_k: int = 5) -> list[dict]:
