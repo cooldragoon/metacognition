@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "expert-brain": {
-      "command": "python",
-      "args": ["expert-brain-server/server.py"]
+      "command": "D:/anaconda3/python.exe",
+      "args": ["D:/cc/metacognition/expert-brain-server/server.py"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
     }
   }
 }
