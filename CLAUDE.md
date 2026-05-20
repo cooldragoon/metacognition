@@ -26,8 +26,9 @@ metacognition/
 │   ├── archive/                 ← 归档
 │   ├── index.md                 ← 内容目录
 │   └── log.md                   ← 时间线日志
+├── .mcp.json                      ← 注册 expert-brain MCP Server
 ├── .claude/
-│   └── settings.local.json      ← 注册 expert-brain MCP Server
+│   └── settings.local.json      ← enableAllProjectMcpServers + permissions
 └── docs/superpowers/
     ├── specs/                   ← 设计文档
     └── plans/                   ← 实施计划
@@ -40,7 +41,9 @@ Expert Brain MCP Server 提供 2 个 tool：
 - **expert_brain__draft_insight**: 记录草稿洞察。输入 symptom/root_cause/resolution/severity，自动去重后写入 Wiki。
 - **expert_brain__retrieve**: 检索知识。输入 query，返回 top_k 条匹配洞察。
 
-启动：Claude Code 通过 settings.local.json 自动启动，无需手动干预。Server 使用 stdio transport。
+启动：Claude Code 通过 `.mcp.json` + `enableAllProjectMcpServers: true` 自动启动，无需手动干预。Server 使用 stdio transport。
+
+> ⚠️ **已踩坑**: 不要在 `settings.local.json` 里写 `mcpServers`——Claude Code 不支持。用 `.mcp.json`。详见 [[draft/mcp-server-tools-not-appearing-in-claude-code-after.md]]。
 
 Wiki 文件格式约定见 `.cursor/insights/wiki/draft/test-insight.md`。
 
