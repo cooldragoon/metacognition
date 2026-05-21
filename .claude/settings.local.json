@@ -13,9 +13,19 @@
       "Bash(pip install *)",
       "Bash(python *)",
       "Bash(git *)",
-      "Bash(where python *)"
+      "Bash(where python *)",
+      "Bash(tasklist)",
+      "Bash(tasklist //FI \"IMAGENAME eq python.exe\")",
+      "Bash(claude mcp *)",
+      "Bash(D:/anaconda3/python.exe D:/cc/metacognition/expert-brain-server/server.py)",
+      "Bash(D:/anaconda3/python.exe *)",
+      "mcp__expert-brain__expert_brain__draft_insight",
+      "mcp__expert-brain__expert_brain__promote",
+      "mcp__expert-brain__expert_brain__decay"
     ]
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": ["expert-brain"]
+  "enabledMcpjsonServers": [
+    "expert-brain"
+  ]
 }
