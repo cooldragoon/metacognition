@@ -36,19 +36,28 @@ LOG_PATH = os.path.join(WIKI_ROOT, "log.md")
 # ---------------------------------------------------------------------------
 
 _EMBED_MODEL = None
+_EMBED_UNAVAILABLE = False
 
 
 def _get_model():
-    """Lazy-load the embedding model (singleton)."""
-    global _EMBED_MODEL
+    """Lazy-load the embedding model (singleton). Returns None if unavailable."""
+    global _EMBED_MODEL, _EMBED_UNAVAILABLE
+    if _EMBED_UNAVAILABLE:
+        return None
     if _EMBED_MODEL is None:
-        _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception:
+            _EMBED_UNAVAILABLE = True
+            return None
     return _EMBED_MODEL
 
 
-def _embed(text: str) -> "np.ndarray":
-    """Compute embedding vector for a text."""
+def _embed(text: str) -> "np.ndarray | None":
+    """Compute embedding vector for a text. Returns None if model unavailable."""
     model = _get_model()
+    if model is None:
+        return None
     return model.encode(text, normalize_embeddings=True)
 
 
@@ -232,10 +241,11 @@ def ingest(
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
 
-    # Store vector embedding as companion .npy file
+    # Store vector embedding as companion .npy file (if model available)
     embedding = _embed(f"{symptom}\n{root_cause}\n{resolution}")
-    np_path = filepath.replace(".md", ".npy")
-    np.save(np_path, embedding)
+    if embedding is not None:
+        np_path = filepath.replace(".md", ".npy")
+        np.save(np_path, embedding)
 
     # Append to log and update the index.
     _append_log("ingest", symptom.strip()[:80])
@@ -245,70 +255,138 @@ def ingest(
 
 
 def check_duplicate(symptom: str, root_cause: str) -> str | None:
-    """Check if a similar insight exists by vector similarity (threshold 0.92)."""
+    """Check if a similar insight exists. Uses vector similarity if model available,
+    falls back to keyword overlap otherwise."""
     if not os.path.isdir(DRAFT_DIR):
         return None
 
     query_embedding = _embed(f"{symptom}\n{root_cause}")
 
-    best_score = 0.0
-    best_id = None
-    for fname in os.listdir(DRAFT_DIR):
-        if not fname.endswith(".md"):
-            continue
-        np_path = os.path.join(DRAFT_DIR, fname.replace(".md", ".npy"))
-        if not os.path.exists(np_path):
-            continue
-        doc_embedding = np.load(np_path)
-        score = _cosine(query_embedding, doc_embedding)
-        if score > best_score:
-            best_score = score
-            fpath = os.path.join(DRAFT_DIR, fname)
-            with open(fpath, "r", encoding="utf-8") as f:
-                meta = _parse_metadata(f.read())
-            best_id = meta.get("id", None)
-
-    if best_score > 0.92 and best_id:
-        return best_id
-    return None
+    if query_embedding is not None:
+        # Vector path
+        best_score = 0.0
+        best_id = None
+        for fname in os.listdir(DRAFT_DIR):
+            if not fname.endswith(".md"):
+                continue
+            np_path = os.path.join(DRAFT_DIR, fname.replace(".md", ".npy"))
+            if not os.path.exists(np_path):
+                continue
+            doc_embedding = np.load(np_path)
+            score = _cosine(query_embedding, doc_embedding)
+            if score > best_score:
+                best_score = score
+                fpath = os.path.join(DRAFT_DIR, fname)
+                with open(fpath, "r", encoding="utf-8") as f:
+                    meta = _parse_metadata(f.read())
+                best_id = meta.get("id", None)
+        if best_score > 0.92 and best_id:
+            return best_id
+        return None
+    else:
+        # Keyword fallback
+        return _check_duplicate_keyword(symptom, root_cause)
 
 
 def query(search: str, top_k: int = 5) -> list[dict]:
-    """Search draft insights by vector similarity. Returns ranked results."""
+    """Search draft insights. Uses vector similarity if model available, falls back to keyword."""
     if not os.path.isdir(DRAFT_DIR):
         return []
 
     query_embedding = _embed(search)
 
-    results = []
-    for fname in os.listdir(DRAFT_DIR):
-        if not fname.endswith(".md"):
-            continue
-        fpath = os.path.join(DRAFT_DIR, fname)
-        np_path = fpath.replace(".md", ".npy")
-        if not os.path.exists(np_path):
-            continue
+    if query_embedding is not None:
+        # Vector path
+        results = []
+        for fname in os.listdir(DRAFT_DIR):
+            if not fname.endswith(".md"):
+                continue
+            fpath = os.path.join(DRAFT_DIR, fname)
+            np_path = fpath.replace(".md", ".npy")
+            if not os.path.exists(np_path):
+                continue
+            with open(fpath, "r", encoding="utf-8") as f:
+                content = f.read()
+            doc_embedding = np.load(np_path)
+            score = _cosine(query_embedding, doc_embedding)
+            if score > 0:
+                meta = _parse_metadata(content)
+                meta["score"] = round(score, 4)
+                meta["wiki_path"] = f"draft/{fname}"
+                meta["symptom"] = meta.get("title", "")
+                meta["insight_id"] = meta.get("id", "")
+                meta["resolution"] = _extract_section(content, "Resolution")
+                results.append(meta)
+        results.sort(key=lambda r: r["score"], reverse=True)
+        results = [r for r in results if r["score"] > 0]
+    else:
+        # Keyword fallback
+        results = _query_keyword(search)
 
-        with open(fpath, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        doc_embedding = np.load(np_path)
-        score = _cosine(query_embedding, doc_embedding)
-
-        if score > 0:
-            meta = _parse_metadata(content)
-            meta["score"] = round(score, 4)
-            meta["wiki_path"] = f"draft/{fname}"
-            results.append(meta)
-
-    results.sort(key=lambda r: r["score"], reverse=True)
-    # Filter zero-score results
-    results = [r for r in results if r["score"] > 0]
     # Bump hit count on returned results
     for r in results[:top_k]:
         fpath = os.path.join(DRAFT_DIR, os.path.basename(r["wiki_path"]))
         _bump_hit_count(fpath)
     return results[:top_k]
+
+
+def _query_keyword(search: str) -> list[dict]:
+    """Keyword-based search (Jaccard overlap), used as fallback when vector model unavailable."""
+    results = []
+    query_words = _tokenize(search)
+    if not query_words:
+        return results
+    for fname in os.listdir(DRAFT_DIR):
+        if not fname.endswith(".md"):
+            continue
+        fpath = os.path.join(DRAFT_DIR, fname)
+        with open(fpath, "r", encoding="utf-8") as f:
+            content = f.read()
+        file_words = _tokenize(content)
+        if not file_words:
+            continue
+        score = len(query_words & file_words) / len(query_words | file_words)
+        if score > 0:
+            meta = _parse_metadata(content)
+            meta["score"] = round(score, 4)
+            meta["wiki_path"] = f"draft/{fname}"
+            meta["symptom"] = meta.get("title", "")
+            meta["insight_id"] = meta.get("id", "")
+            meta["resolution"] = _extract_section(content, "Resolution")
+            results.append(meta)
+    results.sort(key=lambda r: r["score"], reverse=True)
+    return results
+
+
+def _check_duplicate_keyword(symptom: str, root_cause: str) -> str | None:
+    """Keyword-based duplicate check (fallback when vector model unavailable)."""
+    query_words = _tokenize(symptom + " " + root_cause)
+    if not query_words:
+        return None
+    best_score = 0.0
+    best_id = None
+    for fname in os.listdir(DRAFT_DIR):
+        if not fname.endswith(".md"):
+            continue
+        fpath = os.path.join(DRAFT_DIR, fname)
+        with open(fpath, "r", encoding="utf-8") as f:
+            content = f.read()
+        file_words = _tokenize(content)
+        if not file_words:
+            continue
+        overlap = len(query_words & file_words) / len(query_words)
+        if overlap > best_score:
+            best_score = overlap
+            meta = _parse_metadata(content)
+            best_id = meta.get("id", None)
+    if best_score > 0.6 and best_id:
+        return best_id
+    return None
+
+
+def _tokenize(text: str) -> set[str]:
+    """Tokenize text into lowercase words >= 3 characters."""
+    return {w.lower() for w in re.findall(r"[a-zA-Z0-9]{3,}", text)}
 
 
 def promote(insight_id: str) -> dict:
