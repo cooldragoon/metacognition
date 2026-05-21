@@ -33,8 +33,8 @@ metacognition/
 │   ├── draft/ (7)                     ← 草稿态洞察
 │   ├── live/  (2)                     ← 发布态约束 (hit_count >= 5 晋升)
 │   ├── archive/                       ← 归档 (180d 未命中)
-│   ├── index.md                       ← 内容目录
-│   └── log.md                         ← 时间线日志
+│   ├── index.md                       ← setup.sh 重建 (gitignored)
+│   └── log.md                         ← setup.sh 重建 (gitignored)
 │
 └── docs/superpowers/                  ← 设计文档
     ├── specs/  (3)                    ← 设计 spec + 验证报告
@@ -106,6 +106,20 @@ python expert-brain-server/test_scenarios.py    # 46 场景, 0.2s
 python expert-brain-server/eval_search.py       # 搜索质量 (Recall/MRR)
 python expert-brain-server/eval_search.py --json  # 机器可读
 ```
+
+## 团队共享方案 (设计定稿，单机阶段不启用)
+
+```
+.cursor/insights/wiki/
+├── draft/*.md    ← git 跟踪 (种子数据 + 团队决定共享的 insight)
+├── live/*.md     ← git 跟踪 (晋升后的约束, 通过 PR 合并共享)
+├── draft/*.npy   ← gitignore (setup.sh 生成)
+├── live/*.npy    ← gitignore (setup.sh 生成)
+├── index.md      ← gitignore (setup.sh 重建)
+└── log.md        ← gitignore (setup.sh 重建)
+```
+
+个人 insight 保持在本地 `draft/`，不 commit。晋升到 `live/` 后, `git add live/xxx.md` → PR review → merge → 全员同步。非 append-only 文件（`.md` insight）不会产生合并冲突。
 
 ## 引用
 
