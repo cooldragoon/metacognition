@@ -32,6 +32,12 @@ cp "$normalized" /target/
 - Working with file paths returned by MCP tools on Windows
 - Cross-session state where paths are stored and reused later
 
+## Query Variants
+- Windows backslash path breaks bash script
+- escape sequence in Windows file path
+- sed convert backslash to forward slash
+- cross-platform path normalization bash
+
 ## Notes
 
 This is a meta-level insight about the development environment itself. The pattern is recurring: every time a new tool or workflow touches Windows paths, the same normalization step is needed. The cost of forgetting is silent failures that are hard to debug.

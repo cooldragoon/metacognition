@@ -4,7 +4,7 @@
 > Created: 2026-05-20
 > Severity: medium
 > Status: draft
-> Hit Count: 6
+> Hit Count: 12
 > ID: 43df8fe15e36
 
 ## Overview
@@ -18,6 +18,12 @@ Claude Code must be restarted to pick up mcpServers changes in settings.local.js
 
 ## Resolution
 After editing settings.local.json, close and reopen Claude Code for the MCP server to register
+
+## Query Variants
+- MCP tools missing after restarting Claude Code
+- configured MCP server but tools not showing up
+- mcpServers in settings but no tools available
+- after mcp add the tools did not appear
 
 ## Notes
 

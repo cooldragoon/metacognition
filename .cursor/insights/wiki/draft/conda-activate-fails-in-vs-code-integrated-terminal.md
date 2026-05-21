@@ -4,7 +4,7 @@
 > Created: 2026-05-20
 > Severity: high
 > Status: promoted
-> Hit Count: 7
+> Hit Count: 13
 > ID: 55eb6bff0e8c
 
 ## Overview
@@ -18,6 +18,12 @@ VS Code default terminal profile is PowerShell, which does not source conda hook
 
 ## Resolution
 Set terminal.integrated.defaultProfile.windows to Git Bash in VS Code settings.json
+
+## Query Variants
+- conda not recognized as command in VS Code terminal
+- terminal says conda is not a command on Windows
+- bash conda activate fails PowerShell profile
+- Python environment won't activate in editor terminal
 
 ## Notes
 

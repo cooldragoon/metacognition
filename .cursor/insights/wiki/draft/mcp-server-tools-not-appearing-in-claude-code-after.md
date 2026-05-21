@@ -4,7 +4,7 @@
 > Created: 2026-05-20
 > Severity: high
 > Status: promoted
-> Hit Count: 5
+> Hit Count: 9
 > ID: 15078b21adc7
 
 ## Overview
@@ -18,6 +18,12 @@ Claude Code does not support the `mcpServers` key in settings.local.json. MCP se
 
 ## Resolution
 Create `.mcp.json` in the project root with the `mcpServers` config, and add `enableAllProjectMcpServers: true` to `.claude/settings.local.json`
+
+## Query Variants
+- MCP server configuration .mcp.json not being loaded
+- project level MCP json ignored at runtime
+- claude mcp add --scope user is the correct way
+- MCP server registered but tools not found in session
 
 ## Notes
 

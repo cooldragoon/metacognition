@@ -19,6 +19,12 @@ Claude Code does not support the `mcpServers` key in settings.local.json. MCP se
 ## Resolution
 Use `claude mcp add --scope user` to register the server at user level (in `~/.claude.json`). Project `.mcp.json` is not reliably loaded at runtime (known Claude Code issue #15215). Verify with `claude mcp list` after registration. Also add `enableAllProjectMcpServers: true` to settings as a belt-and-suspenders measure.
 
+## Query Variants
+- MCP server configuration .mcp.json not being loaded
+- project level MCP json ignored at runtime
+- claude mcp add --scope user is the correct way
+- MCP server registered but tools not found in session
+
 ## Notes
 
 ## See Also
