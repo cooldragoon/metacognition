@@ -25,8 +25,65 @@ else
 fi
 
 echo ""
-echo "=== Generating vector embeddings from seed insights ==="
+echo "=== Rebuilding index.md and log.md from insight files ==="
 cd "$(dirname "$0")/.."
+python -c "
+import sys; sys.path.insert(0, 'expert-brain-server')
+from wiki_bridge import DRAFT_DIR, LIVE_DIR, INDEX_PATH, LOG_PATH, _parse_metadata
+import os
+
+# Rebuild index.md
+sections = {
+    'draft':  ('Insights pending review before promotion to live.', 'Insight', DRAFT_DIR),
+    'live':   ('Active, reviewed insights used for retrieval.', 'Insight', LIVE_DIR),
+}
+lines = ['# MetaCognition Insights Index', '']
+for section, (desc, col, dir_path) in sections.items():
+    lines.append(f'## {section}')
+    if desc: lines.append(f'{desc}  ')
+    lines.append(f'| {col} | Summary | Updated |')
+    lines.append('|---------|---------|---------|')
+    if os.path.isdir(dir_path):
+        for fname in sorted(os.listdir(dir_path)):
+            if not fname.endswith('.md'): continue
+            with open(os.path.join(dir_path, fname), 'r', encoding='utf-8') as f:
+                meta = _parse_metadata(f.read())
+            title = meta.get('title', fname[:-3])
+            created = meta.get('created', '')
+            # First 80 chars as summary from title
+            summary = title[:80]
+            lines.append(f'| [{title}]({section}/{fname}) | {summary} | {created} |')
+    lines.append('')
+
+with open(INDEX_PATH, 'w', encoding='utf-8') as f:
+    f.write('\\n'.join(lines))
+
+# Rebuild log.md
+log_lines = ['# Wiki Log', '',
+    '<!-- Format: ## [YYYY-MM-DD] Action | Insight title. Cascading updates use - Updated: sub-items -->',
+    '',
+    '## [2026-05-20] scaffold | Wiki directory created',
+    '']
+for section, dir_path in [('draft', DRAFT_DIR), ('live', LIVE_DIR)]:
+    if os.path.isdir(dir_path):
+        for fname in sorted(os.listdir(dir_path)):
+            if not fname.endswith('.md'): continue
+            with open(os.path.join(dir_path, fname), 'r', encoding='utf-8') as f:
+                meta = _parse_metadata(f.read())
+            title = meta.get('title', fname[:-3])
+            created = meta.get('created', '')
+            if title:
+                log_lines.append(f\"## [{created}] ingest | {title}\")
+
+with open(LOG_PATH, 'w', encoding='utf-8') as f:
+    f.write('\\n'.join(log_lines))
+
+print(f'  index.md: rebuilt from {len([f for f in os.listdir(DRAFT_DIR) if f.endswith(\".md\")]) if os.path.isdir(DRAFT_DIR) else 0} draft + {len([f for f in os.listdir(LIVE_DIR) if f.endswith(\".md\")]) if os.path.isdir(LIVE_DIR) else 0} live insights')
+print(f'  log.md: rebuilt')
+"
+
+echo ""
+echo "=== Generating vector embeddings from seed insights ==="
 python -c "
 import sys; sys.path.insert(0, 'expert-brain-server')
 from wiki_bridge import DRAFT_DIR, LIVE_DIR, _embed, _parse_metadata, _extract_section
