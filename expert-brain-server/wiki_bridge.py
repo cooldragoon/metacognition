@@ -15,7 +15,6 @@ import re
 import shutil
 from datetime import date
 
-from sentence_transformers import SentenceTransformer
 import numpy as np
 
 
@@ -32,33 +31,42 @@ LOG_PATH = os.path.join(WIKI_ROOT, "log.md")
 
 
 # ---------------------------------------------------------------------------
-# Embedding helpers
+# Embedding: model2vec (8MB, numpy-only, 500x faster than sentence-transformers)
+# Falls back to keyword search when model unavailable.
 # ---------------------------------------------------------------------------
 
-_EMBED_MODEL = None
+_MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "potion-base-8M")
+_STATIC_MODEL = None
 _EMBED_UNAVAILABLE = False
 
 
 def _get_model():
-    """Lazy-load the embedding model (singleton). Returns None if unavailable."""
-    global _EMBED_MODEL, _EMBED_UNAVAILABLE
+    """Load model2vec from local path or HuggingFace. Returns None → keyword fallback."""
+    global _STATIC_MODEL, _EMBED_UNAVAILABLE
     if _EMBED_UNAVAILABLE:
         return None
-    if _EMBED_MODEL is None:
-        try:
-            _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
-        except Exception:
-            _EMBED_UNAVAILABLE = True
-            return None
-    return _EMBED_MODEL
+    if _STATIC_MODEL is not None:
+        return _STATIC_MODEL
+    try:
+        from model2vec import StaticModel
+        if os.path.isdir(_MODEL_DIR):
+            _STATIC_MODEL = StaticModel.from_pretrained(_MODEL_DIR, normalize=True)
+        else:
+            _STATIC_MODEL = StaticModel.from_pretrained(
+                "minishlab/potion-base-8M", normalize=True
+            )
+    except Exception:
+        _EMBED_UNAVAILABLE = True
+        return None
+    return _STATIC_MODEL
 
 
 def _embed(text: str) -> "np.ndarray | None":
-    """Compute embedding vector for a text. Returns None if model unavailable."""
+    """Compute embedding. Returns None → keyword fallback."""
     model = _get_model()
     if model is None:
         return None
-    return model.encode(text, normalize_embeddings=True)
+    return model.encode(text)
 
 
 def _cosine(a: "np.ndarray", b: "np.ndarray") -> float:
