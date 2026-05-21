@@ -205,8 +205,13 @@ def ingest(
     resolution: str,
     severity: str,
     insight_id: str,
+    variants: list[str] | None = None,
 ) -> str:
     """Create a new draft insight .md node.
+
+    Args:
+        variants: Optional 2-4 query variants — different phrasings of the same
+            problem. Embedded alongside symptom for better semantic search recall.
 
     Returns the absolute file path to the created draft file.
     """
@@ -220,7 +225,8 @@ def ingest(
     # Build a brief overview by combining symptom and resolution.
     overview = f"{symptom.strip()}. Root cause: {root_cause.strip()}. Resolution: {resolution.strip()}"
 
-    content = f"""# {symptom.strip()}
+    # Build the document content
+    parts = [f"""# {symptom.strip()}
 
 > Sources: User observation, {today}
 > Created: {today}
@@ -239,18 +245,23 @@ def ingest(
 {root_cause.strip()}
 
 ## Resolution
-{resolution.strip()}
+{resolution.strip()}"""]
 
-## Notes
+    if variants:
+        vlist = "\n".join(f"- {v.strip()}" for v in variants if v.strip())
+        parts.append(f"## Query Variants\n{vlist}")
 
-## See Also
-"""
+    parts.append("## Notes\n\n## See Also\n")
+    content = "\n".join(parts)
 
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
 
-    # Store vector embedding as companion .npy file (if model available)
-    embedding = _embed(f"{symptom}\n{root_cause}\n{resolution}")
+    # Store vector embedding: embed symptom + variants for broad recall
+    embed_text = f"{symptom}\n{root_cause}\n{resolution}"
+    if variants:
+        embed_text += "\n" + "\n".join(v for v in variants if v.strip())
+    embedding = _embed(embed_text)
     if embedding is not None:
         np_path = filepath.replace(".md", ".npy")
         np.save(np_path, embedding)

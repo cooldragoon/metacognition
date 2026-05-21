@@ -41,6 +41,11 @@ async def handle_list_tools() -> list[Tool]:
                         "description": "low, medium, high, or critical",
                         "default": "medium",
                     },
+                    "variants": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional 2-4 query variants — different phrasings of the same problem for broader search recall",
+                    },
                 },
                 "required": ["symptom", "root_cause", "resolution"],
             },
@@ -85,6 +90,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             root_cause=arguments.get("root_cause", ""),
             resolution=arguments.get("resolution", ""),
             severity=arguments.get("severity", "medium"),
+            variants=arguments.get("variants"),
         )
         return [TextContent(type="text", text=str(result))]
 

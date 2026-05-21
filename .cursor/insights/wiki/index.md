@@ -6,6 +6,8 @@ Insights pending review before promotion to live.
 
 | Insight | Summary | Updated |
 |---------|---------|---------|
+| [test variant embedding](draft/test-variant-embedding.md) | test variant embedding. Root cause: test root cause. Resolution: test resolution | 2026-05-21 |
+| [MCP tool calls require manual confirmation every time — permission prompts interrupt workflow](draft/mcp-tool-calls-require-manual-confirmation-every-time.md) | MCP tool calls require manual confirmation every time — permission prompts inter | 2026-05-21 |
 | [MCP server tools not appearing in Claude Code after configuring settings.local.json](draft/mcp-server-tools-not-appearing-in-claude-code-after.md) | promoted | 2026-05-21 |
 | [MCP server silently fails to start after code change — no error message from Claude Code, no startup log generated](draft/mcp-server-silently-fails-to-start-after-code-change-no.md) | MCP server silently fails to start after code change — no error message from Cla | 2026-05-21 |
 | [conda activate fails in VS Code integrated terminal](draft/conda-activate-fails-in-vs-code-integrated-terminal.md) | promoted | 2026-05-20 |

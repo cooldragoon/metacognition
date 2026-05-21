@@ -13,3 +13,7 @@
 ## [2026-05-21] ingest | MCP server silently fails to start after code change — no error message from Cla
 
 ## [2026-05-21] promote | MCP server tools not appearing in Claude Code after configuring settings.local.json
+
+## [2026-05-21] ingest | MCP tool calls require manual confirmation every time — permission prompts inter
+
+## [2026-05-21] ingest | test variant embedding

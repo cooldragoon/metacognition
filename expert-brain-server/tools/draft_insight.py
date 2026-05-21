@@ -8,6 +8,7 @@ def draft_insight(
     root_cause: str,
     resolution: str,
     severity: str = "medium",
+    variants: list[str] | None = None,
 ) -> dict:
     """Record a draft insight. Deduplicates before writing.
 
@@ -16,6 +17,7 @@ def draft_insight(
         root_cause: Technical explanation (1-2 sentences)
         resolution: Verified fix or workaround (1 sentence)
         severity: low, medium, high, or critical
+        variants: Optional 2-4 query variants — different phrasings of the same problem
     """
     insight_id = _generate_id(symptom, root_cause)
 
@@ -27,7 +29,7 @@ def draft_insight(
             "hit_count": -1,
         }
 
-    filepath = ingest(symptom, root_cause, resolution, severity, insight_id)
+    filepath = ingest(symptom, root_cause, resolution, severity, insight_id, variants)
 
     return {
         "insight_id": insight_id,

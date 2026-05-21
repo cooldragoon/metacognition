@@ -34,10 +34,24 @@ When the user says "记住了", "记住这个坑", "以后别踩这个", "记下
    - **severity**: "low" | "medium" | "high" | "critical"
 
 2. Call `mcp__expert-brain__expert_brain__draft_insight` with these fields.
+   Include the optional `variants` field — 2-4 ways someone might describe the SAME problem
+   in different phrasing. The variants help future search match regardless of exact wording.
 
 3. Report the result:
    - new → "已记录。Hit count: 1"
    - duplicate → "这条经验已经被记录过了。"
+
+## Variants Guidelines
+
+When generating query variants, describe the SAME problem from different angles:
+
+- **Different verbs**: "报错" "找不到" "不认" "失败" "silently fails" "not recognized"
+- **Different subjects**: "conda 命令" "Python 环境" "终端" "shell" "PowerShell"
+- **Different action context**: "trying to run" "after restart" "fresh install" "in VS Code"
+- **Keep them short**: each variant is a single sentence or phrase
+
+The variants are embedded alongside the symptom for semantic search. A user
+describing the pitfall with any of these phrasings should match the insight.
 
 ## Constraints
 
