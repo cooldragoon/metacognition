@@ -2,12 +2,19 @@
 
 import sys
 import os
+from datetime import datetime
+
+_STARTUP_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "startup.log")
+with open(_STARTUP_LOG, "a") as _f:
+    _f.write(f"{datetime.now().isoformat()} server.py launched\n")
+
 import asyncio
 
-# Ensure server can import its own tools regardless of CWD
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    # Ensure server can import its own tools regardless of CWD
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import mcp.server.stdio
+    import mcp.server.stdio
 from mcp.server import Server
 from mcp.types import Tool, TextContent
 
@@ -110,4 +117,11 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        with open(_STARTUP_LOG, "a") as _f:
+            _f.write(f"{datetime.now().isoformat()} entering main()\n")
+        asyncio.run(main())
+    except Exception as _e:
+        with open(_STARTUP_LOG, "a") as _f:
+            _f.write(f"{datetime.now().isoformat()} ERROR: {_e}\n")
+        raise
