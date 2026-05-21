@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "expert-brain": {
-      "command": "python",
-      "args": ["expert-brain-server/server.py"]
-    }
-  }
-}

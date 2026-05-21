@@ -25,6 +25,38 @@ else
 fi
 
 echo ""
+echo "=== Generating vector embeddings from seed insights ==="
+cd "$(dirname "$0")/.."
+python -c "
+import sys; sys.path.insert(0, 'expert-brain-server')
+from wiki_bridge import DRAFT_DIR, LIVE_DIR, _embed, _parse_metadata, _extract_section
+import os, numpy as np
+count = 0
+for dir_path in [DRAFT_DIR, LIVE_DIR]:
+    if not os.path.isdir(dir_path): continue
+    for fname in os.listdir(dir_path):
+        if not fname.endswith('.md'): continue
+        fpath = os.path.join(dir_path, fname)
+        with open(fpath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        meta = _parse_metadata(content)
+        symptom = meta.get('title', '')
+        variants_text = _extract_section(content, 'Query Variants')
+        embed_text = symptom
+        if variants_text:
+            embed_text += '\n' + variants_text.replace('- ', '').replace('\n', ' ')
+        emb = _embed(embed_text)
+        if emb is not None:
+            np.save(fpath.replace('.md', '.npy'), emb)
+            count += 1
+print(f'Generated {count} .npy embeddings')
+"
+
+echo ""
 echo "=== Setup complete ==="
 echo "Model: $(du -sh "$MODEL_DIR" 2>/dev/null | cut -f1)"
-echo "Run: python eval_search.py   # to test search quality"
+echo "Insights: $(ls .cursor/insights/wiki/draft/*.md 2>/dev/null | wc -l) draft + $(ls .cursor/insights/wiki/live/*.md 2>/dev/null | wc -l) live"
+echo ""
+echo "Tests:"
+echo "  python expert-brain-server/test_scenarios.py   # 46 scenario tests"
+echo "  python expert-brain-server/eval_search.py      # search quality"
