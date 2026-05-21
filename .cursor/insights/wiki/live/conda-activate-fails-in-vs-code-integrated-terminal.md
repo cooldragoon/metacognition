@@ -3,8 +3,8 @@
 > Sources: User observation, 2026-05-20
 > Created: 2026-05-20
 > Severity: high
-> Status: promoted
-> Hit Count: 7
+> Status: live
+> Hit Count: 6
 > ID: 55eb6bff0e8c
 
 ## Overview
@@ -22,5 +22,3 @@ Set terminal.integrated.defaultProfile.windows to Git Bash in VS Code settings.j
 ## Notes
 
 ## See Also
-
-> Promoted to: live
