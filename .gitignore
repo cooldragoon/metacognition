@@ -1,1 +1,4 @@
 __pycache__/
+*.npy
+expert-brain-server/models/
+expert-brain-server/startup.log

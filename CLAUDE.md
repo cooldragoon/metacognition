@@ -50,10 +50,28 @@ Wiki 文件格式约定见 `.cursor/insights/wiki/draft/test-insight.md`。
 ## 开发约定
 
 - 当前为单机版，所有数据存储在本地 `.cursor/insights/wiki/` 目录
-- Phase 1 仅做关键词去重 (Jaccard similarity)，不做向量检索
+- 向量搜索 (model2vec, 8M params, 256-dim)，关键词 Jaccard fallback
 - MCP Server 代码保持在 300 行以内，wiki_bridge 是核心模块
 - 不直接修改 CLAUDE.md 来记录洞察——全部通过 MCP tool
-- Python 3.10+, `mcp>=1.0.0`
+- Python 3.10+, `mcp>=1.0.0`, `model2vec>=0.7.0`
+
+## 环境搭建
+
+```bash
+# 安装依赖 + 下载向量模型（首次需要网络，之后离线可用）
+bash expert-brain-server/setup.sh
+
+# 国内网络先设置镜像：
+export HF_ENDPOINT=https://hf-mirror.com
+huggingface-cli download minishlab/potion-base-8M --local-dir expert-brain-server/models/potion-base-8M
+```
+
+## 测试
+
+```bash
+python expert-brain-server/eval_search.py    # 搜索质量评估
+python expert-brain-server/eval_search.py --json  # 机器可读
+```
 
 ## 引用
 
