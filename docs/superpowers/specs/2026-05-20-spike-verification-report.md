@@ -1,6 +1,6 @@
 # Spike 验证报告: "记住了" 知识闭环
 
-> 日期: 2026-05-20 | 状态: 已验证通过
+> 日期: 2026-05-21 | 状态: Phase 2 已完成
 
 ## 1. 验证目标
 
@@ -49,11 +49,24 @@ Spike 过程中记录的 4 条真实洞察：
 - **零分结果未过滤** — `retrieve` 返回 top_k 时包含 score=0.0 的结果。
 - **Hit count 仅在 query 命中时递增**，不做衰减或归档。
 
-## 7. 下一步
+## 7. Phase 2 验证 (2026-05-21)
 
-按 PRD v2.0 路线图，Phase 2 应做：
+| 验证项 | 结果 |
+|--------|:----:|
+| Session Start 自动检索 | ✅ |
+| model2vec 向量搜索 + 关键词 fallback | ✅ |
+| Ensemble 搜索 (向量+关键词合并) | ✅ |
+| Query variants (每种 insight 嵌入多问法) | ✅ |
+| Promote (hit >= 5 → live) | ✅ 2 条已晋升 |
+| Decay (90d 减半, 180d 归档) | ✅ |
+| 46 场景测试 (0.2s, 0 失败) | ✅ |
+| 搜索质量: Recall@5=100%, MRR=0.778 | ✅ |
+| 种子数据: 9 条 insight (7 draft + 2 live) | ✅ |
+| 一键 setup.sh (pip + model + .npy) | ✅ |
 
-- 安装 karpathy-llm-wiki 社区 skill 作为 Wiki 维护者（而非仅使用其格式约定）
-- Upgrade 关键词去重 → 向量去重
-- 实现 Live 晋升（hit_count >= 5 → promote）
-- 知识衰减（90 天未命中 → hit_count 减半）
+## 8. 下一步
+
+- 外脑会诊 (Phase 3) — 暂缓，WebSearch 替代
+- CodeGraph 物理层 — 暂缓
+- 团队共享 — 暂缓
+- 持续积累 insight 喂养知识库

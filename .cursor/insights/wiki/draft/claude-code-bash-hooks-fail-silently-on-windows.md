@@ -4,7 +4,7 @@
 > Created: 2026-05-21
 > Severity: medium
 > Status: draft
-> Hit Count: 0
+> Hit Count: 4
 > ID: ab6b6fa5b4f2
 
 ## Overview
