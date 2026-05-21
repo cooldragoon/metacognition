@@ -308,38 +308,19 @@ def check_duplicate(symptom: str, root_cause: str) -> str | None:
 
 
 def query(search: str, top_k: int = 5) -> list[dict]:
-    """Search draft insights. Uses vector similarity if model available, falls back to keyword."""
+    """Search draft insights. Ensemble: vector + keyword when model available, keyword-only fallback."""
     if not os.path.isdir(DRAFT_DIR):
         return []
 
     query_embedding = _embed(search)
 
     if query_embedding is not None:
-        # Vector path
-        results = []
-        for fname in os.listdir(DRAFT_DIR):
-            if not fname.endswith(".md"):
-                continue
-            fpath = os.path.join(DRAFT_DIR, fname)
-            np_path = fpath.replace(".md", ".npy")
-            if not os.path.exists(np_path):
-                continue
-            with open(fpath, "r", encoding="utf-8") as f:
-                content = f.read()
-            doc_embedding = np.load(np_path)
-            score = _cosine(query_embedding, doc_embedding)
-            if score > 0:
-                meta = _parse_metadata(content)
-                meta["score"] = round(score, 4)
-                meta["wiki_path"] = f"draft/{fname}"
-                meta["symptom"] = meta.get("title", "")
-                meta["insight_id"] = meta.get("id", "")
-                meta["resolution"] = _extract_section(content, "Resolution")
-                results.append(meta)
-        results.sort(key=lambda r: r["score"], reverse=True)
-        results = [r for r in results if r["score"] > 0]
+        # Ensemble path: merge vector + keyword results
+        vec_results = _query_vector(search, query_embedding)
+        kw_results = _query_keyword(search)
+        results = _merge_results(vec_results, kw_results)
     else:
-        # Keyword fallback
+        # Keyword-only fallback
         results = _query_keyword(search)
 
     # Bump hit count on returned results
@@ -347,6 +328,59 @@ def query(search: str, top_k: int = 5) -> list[dict]:
         fpath = os.path.join(DRAFT_DIR, os.path.basename(r["wiki_path"]))
         _bump_hit_count(fpath)
     return results[:top_k]
+
+
+def _query_vector(search: str, query_embedding: "np.ndarray") -> list[dict]:
+    """Vector similarity search over draft/*.npy embeddings."""
+    results = []
+    for fname in os.listdir(DRAFT_DIR):
+        if not fname.endswith(".md"):
+            continue
+        fpath = os.path.join(DRAFT_DIR, fname)
+        np_path = fpath.replace(".md", ".npy")
+        if not os.path.exists(np_path):
+            continue
+        with open(fpath, "r", encoding="utf-8") as f:
+            content = f.read()
+        doc_embedding = np.load(np_path)
+        score = _cosine(query_embedding, doc_embedding)
+        if score > 0:
+            meta = _parse_metadata(content)
+            meta["score"] = round(score, 4)
+            meta["wiki_path"] = f"draft/{fname}"
+            meta["symptom"] = meta.get("title", "")
+            meta["insight_id"] = meta.get("id", "")
+            meta["resolution"] = _extract_section(content, "Resolution")
+            results.append(meta)
+    results.sort(key=lambda r: r["score"], reverse=True)
+    return [r for r in results if r["score"] > 0]
+
+
+def _merge_results(vec_results: list[dict], kw_results: list[dict]) -> list[dict]:
+    """Merge vector and keyword results, deduplicating by insight_id.
+
+    Strategy: vector score provides the base confidence, keyword results fill
+    gaps (insights that keyword found but vector missed). Final score is
+    max(vector, keyword*0.3) — keyword contributes but doesn't dominate.
+    """
+    merged = {}
+    for r in vec_results:
+        merged[r["insight_id"]] = r  # vector result as base
+
+    for r in kw_results:
+        kid = r["insight_id"]
+        kw_weighted = r["score"] * 0.3
+        if kid in merged:
+            # Blend: take max, favoring vector
+            merged[kid]["score"] = round(max(merged[kid]["score"], kw_weighted), 4)
+        else:
+            # Keyword-only hit, rescale
+            r["score"] = round(kw_weighted, 4)
+            merged[kid] = r
+
+    results = list(merged.values())
+    results.sort(key=lambda r: r["score"], reverse=True)
+    return results
 
 
 def _query_keyword(search: str) -> list[dict]:
