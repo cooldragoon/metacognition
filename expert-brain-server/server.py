@@ -10,11 +10,10 @@ with open(_STARTUP_LOG, "a") as _f:
 
 import asyncio
 
-try:
-    # Ensure server can import its own tools regardless of CWD
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Ensure server can import its own tools regardless of CWD
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-    import mcp.server.stdio
+import mcp.server.stdio
 from mcp.server import Server
 from mcp.types import Tool, TextContent
 
