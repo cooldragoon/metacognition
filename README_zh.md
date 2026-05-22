@@ -28,8 +28,13 @@ hit_count >= 5 → promote (draft → live)
 git clone <repo-url>
 cd metacognition
 
-# 2. 一键 setup（安装依赖 + 下载模型 + 生成 embedding）
+# 2. 一键 setup — 自动安装所有依赖
 bash expert-brain-server/setup.sh
+# 具体包括：
+#   pip install model2vec mcp numpy          ← Python 依赖
+#   huggingface-cli download potion-base-8M   ← 嵌入模型 (60MB, 缓存后离线可用)
+#   从种子数据生成 .npy 嵌入向量
+#   重建 index.md 和 log.md
 
 # 3. 验证
 python expert-brain-server/test_scenarios.py    # 46 场景测试

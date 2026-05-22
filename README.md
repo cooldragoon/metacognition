@@ -47,8 +47,13 @@ hit_count >= 5 → promote (draft → live)
 git clone https://github.com/cooldragoon/metacognition.git
 cd metacognition
 
-# 2. One-click setup (dependencies + model download + embedding generation)
+# 2. One-click setup — installs everything you need automatically
 bash expert-brain-server/setup.sh
+# This runs:
+#   pip install model2vec mcp numpy          ← Python dependencies
+#   huggingface-cli download potion-base-8M   ← embedding model (60MB, cached offline)
+#   generate .npy embeddings from seed insights
+#   rebuild index.md and log.md
 
 # 3. Register MCP server
 claude mcp add --scope user expert-brain -- python expert-brain-server/server.py
