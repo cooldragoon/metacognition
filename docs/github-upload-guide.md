@@ -1,111 +1,99 @@
-# GitHub 上传教程
+# GitHub Upload Guide
 
-## 1. 创建 GitHub 仓库
+## 1. Create the GitHub Repository
 
-在 [github.com/new](https://github.com/new) 创建新仓库：
+Go to [github.com/new](https://github.com/new) and create a new repository:
 
 - **Repository name**: `metacognition`
-- **Description**: `可验证的跨模型认知架构 — 让 Claude Code 从单次会话的聪明进化为跨会话的睿智。`
-- **Public** 或 **Private**（自选）
-- **不要** 勾选 "Add a README file"（我们已经有了）
-- **不要** 勾选 ".gitignore"（我们已经有了）
-- **不要** 勾选 "Choose a license"（我们已经有了）
+- **Description**: `A verifiable cross-model cognitive architecture for Claude Code — evolve from session-smart to cross-session wise.`
+- **Public** or **Private** (your choice)
+- **Do NOT** check "Add a README file" (we already have one)
+- **Do NOT** check ".gitignore" (we already have one)
+- **Do NOT** check "Choose a license" (we already have one)
 
-## 2. 推送代码
+## 2. Push the Code
 
-创建完成后，GitHub 会显示 `…or push an existing repository from the command line` 的指引：
+After creation, GitHub shows the `…or push an existing repository from the command line` instructions:
 
 ```bash
 cd D:/cc/metacognition
 
-# 添加远程仓库（替换 YOUR_USERNAME 为你的 GitHub 用户名）
+# Add the remote (replace YOUR_USERNAME)
 git remote add origin https://github.com/YOUR_USERNAME/metacognition.git
 
-# 推送到 GitHub
+# Push to GitHub
 git push -u origin master
 ```
 
-> 如果已配置 SSH Key，也可以使用 SSH 地址：
+> If you have SSH keys configured, you can use the SSH URL instead:
 > ```bash
 > git remote add origin git@github.com:YOUR_USERNAME/metacognition.git
 > git push -u origin master
 > ```
 
-## 3. 验证推送结果
+## 3. Verify
 
-推送成功后访问 `https://github.com/YOUR_USERNAME/metacognition`，检查：
+Visit `https://github.com/YOUR_USERNAME/metacognition` and confirm:
 
-- [ ] README.md 正常渲染
-- [ ] 文件结构完整（31+ 个文件）
-- [ ] LICENSE 显示 MIT
-- [ ] 没有多余文件（.npy, models/, .claude/ 等已排除）
+- [ ] README.md renders correctly
+- [ ] File tree is complete (35+ files)
+- [ ] LICENSE shows MIT
+- [ ] No stray files (.npy, models/, .claude/ are excluded by .gitignore)
 
-## 4. 可选设置
+## 4. Optional Settings
 
-### 添加 Topic 标签
-在仓库页面的 "About" 区域，点击齿轮图标，添加 tags：
+### Add Topic Tags
+In the "About" section on the repo page, click the gear icon and add tags:
 ```
-claude-code, mcp, knowledge-management, ai-agent, metacognition, dev-tools
+claude-code mcp knowledge-management ai-agent metacognition dev-tools
 ```
 
-### 添加项目网站
-如果后续部署文档网站，可以在 About 区域填入 URL。
-
-### 保护分支
-Settings → Branches → Add branch protection rule：
+### Branch Protection
+Settings → Branches → Add branch protection rule:
 - Branch name pattern: `master`
-- 勾选 "Require a pull request before merging"
+- Check "Require a pull request before merging"
 
-## 5. 团队协作流程
+## 5. Team Collaboration
 
-### 新成员加入
+### New member onboarding
 
 ```bash
-# Clone
 git clone https://github.com/YOUR_USERNAME/metacognition.git
 cd metacognition
-
-# 一键安装
 bash expert-brain-server/setup.sh
-
-# 注册 MCP Server
 claude mcp add --scope user expert-brain -- python expert-brain-server/server.py
-
-# 重启 Claude Code → Session Start 自动展示种子陷阱
+# Restart Claude Code → Session Start auto-shows seed pitfalls
 ```
 
-### 分享晋升的 insight
+### Sharing a promoted insight
 
 ```bash
-# 在本地晋升后（hit_count >= 5）
+# After local promotion (hit_count >= 5)
 git add .cursor/insights/wiki/live/<insight-file>.md
 git commit -m "promote: <insight title>"
 git push
 
-# 通知队友 pull
-# 队友拉取后跑一次 setup.sh 重建 index/log
+# Teammates pull, then run setup.sh to rebuild index/log
 ```
 
-> 个人 draft insight 保留在本地，不 push。
-> 只通过 PR 合并 `live/` 目录的变更。
+> Personal draft insights stay local. Only `live/` goes through PR merge.
 
-## 6. 首次推送确认清单
+## 6. Pre-Push Checklist
 
-推送前确认以下文件都在仓库中且内容正确：
-
-| 文件 | 用途 | 
-|------|------|
-| `README.md` | 产品入口 |
-| `CLAUDE.md` | 项目指南 |
-| `AGENTS.md` | Agent 入口 |
-| `LICENSE` | MIT 授权 |
-| `CHANGELOG.md` | 版本历史 |
-| `.gitignore` | 排除规则 |
-| `expert-brain-server/` | MCP Server 核心代码 |
-| `.claude/skills/metacognition/SKILL.md` | 行为契约 |
-| `.cursor/insights/wiki/draft/*.md` | 种子数据 |
-| `.cursor/insights/wiki/live/*.md` | 示例约束 |
-| `docs/product-intro.md` | 产品介绍 |
-| `docs/github-upload-guide.md` | 本教程 |
-| `docs/superpowers/specs/*` | 设计文档 |
-| `docs/superpowers/plans/*` | 实施计划 |
+| File | Purpose |
+|------|---------|
+| `README.md` | Project landing page (English) |
+| `README_zh.md` | Project landing page (Chinese) |
+| `CLAUDE.md` | Project guide for AI agents |
+| `AGENTS.md` | Agent entry point |
+| `LICENSE` | MIT License |
+| `CHANGELOG.md` | Release history |
+| `.gitignore` | Exclusion rules |
+| `expert-brain-server/` | MCP server source code |
+| `.claude/skills/metacognition/SKILL.md` | Behavior contract |
+| `.cursor/insights/wiki/draft/*.md` | Seed insights |
+| `.cursor/insights/wiki/live/*.md` | Sample live constraints |
+| `docs/product-intro.md` | Product introduction |
+| `docs/github-upload-guide.md` | This guide |
+| `docs/superpowers/specs/*` | Design specs |
+| `docs/superpowers/plans/*` | Implementation plans |
