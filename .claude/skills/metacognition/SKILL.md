@@ -10,22 +10,22 @@ description: Cross-session knowledge persistence — auto-retrieves known pitfal
 At the start of every session, you MUST execute this before responding to the user:
 
 1. Call `mcp__expert-brain__expert_brain__retrieve` with a query that summarizes the current project
-   context. Use the project name ("metacognition"), operating system ("Windows"), and technologies in use
-   (Python, bash, VS Code, Claude Code).
+   context. Use the project name, OS, and technologies in use (Python, bash, VS Code, Claude Code, etc.).
 
 2. If results are returned AND the top result has severity "high" or "critical":
-   > "⚠️ 发现已知陷阱:"
+   > "⚠️ Known pitfalls from previous sessions:"
    > List each result with its symptom and resolution.
 
 3. If results exist but are all medium/low severity:
-   > "💡 过往经验:"
+   > "💡 Lessons from past sessions:"
    > List briefly.
 
 4. If no results, proceed SILENTLY. Do NOT tell the user "no insights found."
 
 ## Recording Insights (TRIGGER)
 
-When the user says "记住了", "记住这个坑", "以后别踩这个", "记下来", or similar:
+When the user signals a lesson learned — saying "remembered", "记住了", "记下来",
+"remember this", "learned a lesson", "don't fall for this again", or similar:
 
 1. Synthesize a concise insight:
    - **symptom**: What went wrong (1 sentence)
@@ -38,31 +38,31 @@ When the user says "记住了", "记住这个坑", "以后别踩这个", "记下
    in different phrasing. The variants help future search match regardless of exact wording.
 
 3. Report the result:
-   - new → "已记录。Hit count: 1"
-   - duplicate → "这条经验已经被记录过了。"
+   - new → "Recorded. Hit count: 1"
+   - duplicate → "Already recorded (ID: {insight_id})."
 
 ## Promotion (TRIGGER)
 
-When the user says "固化这条规则", "把这个写进规范", or when you notice an insight
+When the user says "promote this rule", "固化这条规则", or when an insight
 has hit_count >= 5 in the retrieve results:
 
 1. Call `mcp__expert-brain__expert_brain__promote` with the insight_id.
 
 2. Report the result:
    - promoted + has_remote=true →
-     "已晋升为 Live Constraint。建议 commit 并 push 分享给团队。"
+     "Promoted to Live Constraint. Consider committing and pushing to share with your team."
    - promoted + has_remote=false →
-     "已晋升为 Live Constraint。"
+     "Promoted to Live Constraint."
    - threshold_not_met →
-     "该 insight 命中次数不足 (需要 >= 5)。"
+     "Insufficient hit count (need >= 5)."
 
 ## Variants Guidelines
 
 When generating query variants, describe the SAME problem from different angles:
 
-- **Different verbs**: "报错" "找不到" "不认" "失败" "silently fails" "not recognized"
-- **Different subjects**: "conda 命令" "Python 环境" "终端" "shell" "PowerShell"
-- **Different action context**: "trying to run" "after restart" "fresh install" "in VS Code"
+- **Different verbs**: "fails" "not found" "not recognized" "silently fails" "throws error"
+- **Different subjects**: reframe what broke — the tool, the command, the config, the environment
+- **Different action context**: "trying to run" "after restart" "fresh install" "in editor"
 - **Keep them short**: each variant is a single sentence or phrase
 
 The variants are embedded alongside the symptom for semantic search. A user
@@ -72,4 +72,4 @@ describing the pitfall with any of these phrasings should match the insight.
 
 - NEVER write insight content directly to files — ALWAYS use the MCP tool.
 - NEVER append rules to CLAUDE.md — all insights go through the MCP tool.
-- The user can say "忽略" to skip recording.
+- The user can say "ignore"/"忽略" to skip recording.

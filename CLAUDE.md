@@ -1,126 +1,126 @@
 # CLAUDE.md
 
-MetaCognition — 为 Claude Code 构建的可验证跨模型认知架构。单机优先。
+MetaCognition — A verifiable cross-model cognitive architecture for Claude Code. Single-machine first.
 
-## 项目概述
+## Overview
 
-让 AI 辅助编程从"单次会话的聪明"进化为"跨会话的睿智"：遇到诡异 bug 解决后说"记住了"，系统自动记录 draft insight 到 Wiki，下次遇到同类问题时自动检索并提示。当前 Phase 2 完成，具备完整的知识生命周期管理。
+Evolve AI-assisted coding from "smart in one session" to "wise across sessions". When you fix a tricky bug and say "remembered", the system records a draft insight to the Wiki. The next time a similar issue arises, it's automatically retrieved and surfaced. Currently at Phase 2 with full knowledge lifecycle management.
 
-## 项目结构
+## Project Structure
 
 ```
 metacognition/
-├── README.md                          ← 新用户入口
-├── CLAUDE.md                          ← 项目指南（本文件）
-├── .gitignore                         ← 排除 .npy / models/ / .claude/
+├── README.md                          ← New user entry point
+├── CLAUDE.md                          ← Project guide (this file)
+├── .gitignore                         ← Excludes .npy / models/ / .claude/
 │
 ├── expert-brain-server/               ← MCP Server (Python, stdio transport)
-│   ├── server.py                      ← MCP 入口, 注册 4 个 tool
-│   ├── wiki_bridge.py                 ← 核心引擎 (markdown I/O + ensemble 搜索)
+│   ├── server.py                      ← MCP entry, registers 4 tools
+│   ├── wiki_bridge.py                 ← Core engine (markdown I/O + ensemble search)
 │   ├── tools/
 │   │   ├── draft_insight.py           ← expert_brain__draft_insight
 │   │   └── retrieve.py                ← expert_brain__retrieve
-│   ├── setup.sh                       ← 一键安装 (pip + model + embedding 生成)
+│   ├── setup.sh                       ← One-click install (pip + model + embedding generation)
 │   ├── requirements.txt               ← mcp + model2vec + numpy
-│   ├── test_scenarios.py              ← 46 场景测试
-│   ├── eval_search.py                 ← 搜索质量评估
-│   └── models/                        ← 向量模型 (setup.sh 下载, gitignore 排除)
+│   ├── test_scenarios.py              ← 46 scenario tests
+│   ├── eval_search.py                 ← Search quality evaluation
+│   └── models/                        ← Vector model (downloaded by setup.sh, gitignored)
 │
 ├── .claude/skills/metacognition/      ← MetaCognition Skill
-│   └── SKILL.md                       ← 行为契约 (session start + "记住了")
+│   └── SKILL.md                       ← Behavior contract (session start + "remembered")
 │
-├── .cursor/insights/wiki/             ← 知识存储 (种子数据 9 条)
-│   ├── draft/ (7)                     ← 草稿态洞察
-│   ├── live/  (2)                     ← 发布态约束 (hit_count >= 5 晋升)
-│   ├── archive/                       ← 归档 (180d 未命中)
-│   ├── index.md                       ← setup.sh 重建 (gitignored)
-│   └── log.md                         ← setup.sh 重建 (gitignored)
+├── .cursor/insights/wiki/             ← Knowledge store (9 seed insights)
+│   ├── draft/ (7)                     ← Draft insights
+│   ├── live/  (2)                     ← Live constraints (promoted at hit_count >= 5)
+│   ├── archive/                       ← Archived (180d without hits)
+│   ├── index.md                       ← Rebuilt by setup.sh (gitignored)
+│   └── log.md                         ← Rebuilt by setup.sh (gitignored)
 │
-└── docs/superpowers/                  ← 设计文档
-    ├── specs/  (3)                    ← 设计 spec + 验证报告
-    └── plans/  (2)                    ← 实施计划
+└── docs/superpowers/                  ← Design documents
+    ├── specs/  (3)                    ← Design specs + verification report
+    └── plans/  (2)                    ← Implementation plans
 ```
 
 ## MCP Server
 
-Expert Brain MCP Server 提供 4 个 tool：
+Expert Brain MCP Server provides 4 tools:
 
-| Tool | 功能 | 关键输入 |
-|------|------|---------|
-| `expert_brain__draft_insight` | 记录洞察 + 自动去重 + variant 嵌入 | symptom, root_cause, resolution, severity, variants? |
-| `expert_brain__retrieve` | Ensemble 搜索 (向量 + 关键词) | query, top_k? |
-| `expert_brain__promote` | 晋升 draft → live (hit >= 5) | insight_id |
-| `expert_brain__decay` | 衰减 (90d 减半) + 归档 (180d) | — |
+| Tool | Purpose | Key Inputs |
+|------|---------|-----------|
+| `expert_brain__draft_insight` | Record insight + auto-dedup + variant embedding | symptom, root_cause, resolution, severity, variants? |
+| `expert_brain__retrieve` | Ensemble search (vector + keyword) | query, top_k? |
+| `expert_brain__promote` | Promote draft → live (hit >= 5) | insight_id |
+| `expert_brain__decay` | Decay (90d halve) + archive (180d) | — |
 
-启动方式：`claude mcp add --scope user expert-brain -- python expert-brain-server/server.py`
+Startup: `claude mcp add --scope user expert-brain -- python expert-brain-server/server.py`
 
-> ⚠️ **已踩坑**: 
-> - 不要在 `settings.local.json` 里写 `mcpServers`——Claude Code 不支持。用 `claude mcp add --scope user`。项目 `.mcp.json` 有已知 bug (Issue #15215)。
-> - 改完 server.py 后跑 `python -c "import py_compile; py_compile.compile('server.py', doraise=True)"` 检查语法——SyntaxError 会导致 MCP 静默失败。
-> - 新 tool 需要加到 `permissions.allow` 白名单。
+> ⚠️ **Known pitfalls**:
+> - Don't write `mcpServers` in `settings.local.json` — Claude Code doesn't support it. Use `claude mcp add --scope user`. Project `.mcp.json` has a known bug (Issue #15215).
+> - After editing server.py, run `python -c "import py_compile; py_compile.compile('server.py', doraise=True)"` to check syntax — SyntaxError causes silent MCP failure.
+> - New tools must be added to the `permissions.allow` whitelist.
 
-## 搜索引擎
+## Search Engine
 
 ```
-用户查询
+User query
     │
-    ├── model2vec 向量搜索 (potion-base-8M, 256-dim, 32ms)
-    │   ├── 嵌入来源: symptom + variants
-    │   └── 不可用? → 关键词 Jaccard fallback (12ms)
+    ├── model2vec vector search (potion-base-8M, 256-dim, 32ms)
+    │   ├── Embedding source: symptom + variants
+    │   └── Unavailable? → keyword Jaccard fallback (12ms)
     │
-    └── Ensemble 合并:
-        向量主导排序 + 关键词补充召回
+    └── Ensemble merge:
+        Vector-dominant ranking + keyword supplementary recall
         → Recall@5=100%, MRR=0.778
 ```
 
-## 种子数据
+## Seed Data
 
-9 条 insight 覆盖 MCP 开发 / Python 环境 / Claude Code hook 场景。新用户 clone 后跑 `bash setup.sh` 即可体验完整闭环。
+9 insights covering MCP development / Python environment / Claude Code hook scenarios. New users run `bash setup.sh` after clone to experience the full loop.
 
-## 开发约定
+## Dev Conventions
 
-- 单机优先，所有数据本地 `.cursor/insights/wiki/` markdown 文件
-- `.npy` 嵌入文件可重生成（不在 git 中），`setup.sh` 自动生成
-- MCP Server 代码保持在 500 行以内，wiki_bridge 是核心模块
-- 不直接修改 CLAUDE.md 来记录洞察——全部通过 MCP tool
+- Single-machine first; all data local in `.cursor/insights/wiki/` markdown files
+- `.npy` embeddings are regenerable (not in git), auto-generated by `setup.sh`
+- MCP Server code kept under 500 lines; wiki_bridge is the core module
+- Never write insights directly to CLAUDE.md — always through the MCP tool
 - Python 3.10+, `mcp>=1.0.0`, `model2vec>=0.7.0`, numpy
-- 向量模型不可用 → 关键词 fallback → 服务不退
+- Vector model unavailable → keyword fallback → graceful degradation
 
-## 环境搭建
-
-```bash
-# 一键 setup（首次需要网络下载 60MB 模型，之后离线可用）
-bash expert-brain-server/setup.sh
-
-# 国内网络先设置镜像：
-export HF_ENDPOINT=https://hf-mirror.com
-
-# 注册 MCP Server
-claude mcp add --scope user expert-brain -- python expert-brain-server/server.py
-```
-
-## 测试
-
-```bash
-python expert-brain-server/test_scenarios.py    # 46 场景, 0.2s
-python expert-brain-server/eval_search.py       # 搜索质量 (Recall/MRR)
-python expert-brain-server/eval_search.py --json  # 机器可读
-```
-
-## 团队共享方案 (设计定稿，单机阶段不启用)
+## Team Sharing (design finalized, not active in single-machine phase)
 
 ```
 .cursor/insights/wiki/
-├── draft/*.md    ← git 跟踪 (种子数据 + 团队决定共享的 insight)
-├── live/*.md     ← git 跟踪 (晋升后的约束, 通过 PR 合并共享)
-├── draft/*.npy   ← gitignore (setup.sh 生成)
-├── live/*.npy    ← gitignore (setup.sh 生成)
-├── index.md      ← gitignore (setup.sh 重建)
-└── log.md        ← gitignore (setup.sh 重建)
+├── draft/*.md    ← git tracked (seed data + team-decided shared insights)
+├── live/*.md     ← git tracked (promoted constraints, shared via PR merge)
+├── draft/*.npy   ← gitignore (setup.sh generates)
+├── live/*.npy    ← gitignore (setup.sh generates)
+├── index.md      ← gitignore (setup.sh rebuilds)
+└── log.md        ← gitignore (setup.sh rebuilds)
 ```
 
-个人 insight 保持在本地 `draft/`，不 commit。晋升到 `live/` 后, `git add live/xxx.md` → PR review → merge → 全员同步。非 append-only 文件（`.md` insight）不会产生合并冲突。
+Personal insights stay in local `draft/`, not committed. When promoted to `live/`, `git add live/xxx.md` → PR review → merge → team sync. Non-append-only files (`.md` insights) won't produce merge conflicts.
 
-## 引用
+## Setup
 
-全局行为准则见 `D:\cc\CLAUDE.md`。Superpowers 工作流技能已可用。
+```bash
+# One-click setup (first run needs network for 60MB model download; offline after)
+bash expert-brain-server/setup.sh
+
+# For users in China, set a mirror first:
+export HF_ENDPOINT=https://hf-mirror.com
+
+# Register MCP Server
+claude mcp add --scope user expert-brain -- python expert-brain-server/server.py
+```
+
+## Testing
+
+```bash
+python expert-brain-server/test_scenarios.py    # 46 scenarios, 0.2s
+python expert-brain-server/eval_search.py       # Search quality (Recall/MRR)
+python expert-brain-server/eval_search.py --json  # Machine-readable
+```
+
+## References
+
+Global behavioral guidelines at `D:\cc\CLAUDE.md`. Superpowers workflow skills available.
