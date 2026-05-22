@@ -41,6 +41,21 @@ When the user says "记住了", "记住这个坑", "以后别踩这个", "记下
    - new → "已记录。Hit count: 1"
    - duplicate → "这条经验已经被记录过了。"
 
+## Promotion (TRIGGER)
+
+When the user says "固化这条规则", "把这个写进规范", or when you notice an insight
+has hit_count >= 5 in the retrieve results:
+
+1. Call `mcp__expert-brain__expert_brain__promote` with the insight_id.
+
+2. Report the result:
+   - promoted + has_remote=true →
+     "已晋升为 Live Constraint。建议 commit 并 push 分享给团队。"
+   - promoted + has_remote=false →
+     "已晋升为 Live Constraint。"
+   - threshold_not_met →
+     "该 insight 命中次数不足 (需要 >= 5)。"
+
 ## Variants Guidelines
 
 When generating query variants, describe the SAME problem from different angles:

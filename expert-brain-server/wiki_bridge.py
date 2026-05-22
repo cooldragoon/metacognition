@@ -489,7 +489,27 @@ def promote(insight_id: str) -> dict:
     _append_log("promote", title)
     _update_index(live_fname, title, "promoted")
 
-    return {"promoted_id": insight_id, "status": "promoted", "live_path": live_path}
+    has_remote = _check_git_remote()
+    return {
+        "promoted_id": insight_id,
+        "status": "promoted",
+        "live_path": live_path,
+        "has_remote": has_remote,
+    }
+
+
+def _check_git_remote() -> bool:
+    """Check whether the git repo has a remote configured."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "remote"],
+            capture_output=True, text=True,
+            cwd=os.path.dirname(WIKI_ROOT),
+        )
+        return bool(result.stdout.strip())
+    except Exception:
+        return False
 
 
 def decay() -> dict:
