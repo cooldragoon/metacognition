@@ -44,7 +44,7 @@ hit_count >= 5 → promote (draft → live)
 
 ```bash
 # 1. Clone
-git clone https://github.com/<user>/metacognition.git
+git clone https://github.com/cooldragoon/metacognition.git
 cd metacognition
 
 # 2. One-click setup (dependencies + model download + embedding generation)
