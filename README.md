@@ -10,18 +10,23 @@ A verifiable cross-model cognitive architecture for Claude Code. Record lessons 
 ## Architecture
 
 ```
-User says "remembered" → MetaCognition Skill → draft_insight (MCP tool)
-                                                 ├── dedup (vector > 0.92 | keyword > 0.6)
-                                                 ├── write draft/*.md + query variants
-                                                 └── _embed() → .npy
+User says "remembered"
+    │
+    └── MetaCognition Skill → draft_insight (MCP tool)
+        ├── dedup (vector > 0.92 | keyword > 0.6)
+        ├── write draft/*.md + query variants
+        └── _embed() → .npy
 
-Session start → Skill auto-calls retrieve → ensemble search
-                                              ├── model2vec vector (256-dim, 32ms)
-                                              └── Jaccard keyword fallback (12ms)
-                                              └── match? → surface known pitfalls
+Session start
+    │
+    └── Skill auto-calls retrieve → ensemble search
+        ├── model2vec vector (256-dim, 32ms)
+        └── Jaccard keyword fallback (12ms)
+            │
+            └── match? → surface known pitfalls
 
 hit_count >= 5 → promote (draft → live)
-90d stale → decay (hit_count halved) → 180d → archive
+90d stale → decay (half hit_count) → 180d → archive
 ```
 
 ## Why MetaCognition
@@ -35,19 +40,21 @@ hit_count >= 5 → promote (draft → live)
 
 ## Quick Start
 
+**Prerequisites**: Python 3.10+, git, Claude Code installed and authenticated.
+
 ```bash
 # 1. Clone
 git clone https://github.com/<user>/metacognition.git
 cd metacognition
 
-# 2. One-click setup (pip + model download + embedding generation)
+# 2. One-click setup (dependencies + model download + embedding generation)
 bash expert-brain-server/setup.sh
 
 # 3. Register MCP server
 claude mcp add --scope user expert-brain -- python expert-brain-server/server.py
 
 # 4. Restart Claude Code
-# Session Start auto-retrieves seed insights — no configuration needed
+# Session Start auto-retrieves seed insights — no setup beyond this
 ```
 
 **Users in China**: setup.sh auto-tries the hf-mirror.com mirror. You can also set it manually:
@@ -56,6 +63,15 @@ claude mcp add --scope user expert-brain -- python expert-brain-server/server.py
 export HF_ENDPOINT=https://hf-mirror.com
 huggingface-cli download minishlab/potion-base-8M --local-dir expert-brain-server/models/potion-base-8M
 ```
+
+## Daily Usage
+
+| When you... | MetaCognition does... |
+|-------------|----------------------|
+| Open Claude Code | Auto-retrieves known pitfalls for your project+OS+stack |
+| Say "remembered" | Records a draft insight with auto-generated query variants |
+| Say "promote this" | Promotes draft → live constraint (hit_count >= 5) |
+| Fix the same bug twice | Duplicate detection prevents redundant recordings |
 
 ## How It Works With Superpowers and gstack
 
